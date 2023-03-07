@@ -22,6 +22,11 @@ dp = Dispatcher(bot, loop=loop)
 PRICE = types.LabeledPrice(label='VPN', amount=20000)
 
 
+@dp.message_handler(commands=['start'])
+async def process_terms_command(message: types.Message):
+    await message.reply(MESSAGES['terms'], reply=False)
+
+
 @dp.message_handler(commands=['terms'])
 async def process_terms_command(message: types.Message):
     await message.reply(MESSAGES['terms'], reply=False)
