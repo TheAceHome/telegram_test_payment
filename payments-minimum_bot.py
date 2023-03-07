@@ -19,7 +19,7 @@ bot = Bot(BOT_TOKEN)
 dp = Dispatcher(bot, loop=loop)
 
 # Setup prices
-PRICE = types.LabeledPrice(label='Настоящая Машина Времени', amount=4200000)
+PRICE = types.LabeledPrice(label='VPN', amount=20000)
 
 
 @dp.message_handler(commands=['terms'])
@@ -43,7 +43,7 @@ async def process_buy_command(message: types.Message):
                            photo_size=512,
                            is_flexible=False,  # True если конечная цена зависит от способа доставки
                            prices=[PRICE],
-                           start_parameter='time-machine-example',
+                           start_parameter='vpn-example',
                            payload='some-invoice-payload-for-our-internal-use'
                            )
 
