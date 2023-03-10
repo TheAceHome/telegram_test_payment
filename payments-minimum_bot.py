@@ -10,7 +10,7 @@ from yookassa import Configuration, Payment
 import uuid
 
 from messages import MESSAGES
-from config import BOT_TOKEN, PAYMENTS_PROVIDER_TOKEN, TIME_MACHINE_IMAGE_URL,account_id_cfg,secret_key_cfg
+from config import BOT_TOKEN, PAYMENTS_PROVIDER_TOKEN, TIME_MACHINE_IMAGE_URL, account_id_cfg, secret_key_cfg
 from dict_to_db import dict_to_db_func
 
 idempotence_key = str(uuid.uuid4())
@@ -20,12 +20,13 @@ Configuration.secret_key = secret_key_cfg
 logging.basicConfig(format=u'%(filename)+13s [ LINE:%(lineno)-4s] %(levelname)-8s [%(asctime)s] %(message)s',
                     level=logging.INFO)
 
-
 loop = asyncio.get_event_loop()
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher(bot, loop=loop)
 
-def create_invoice():
+
+def create_invoice(message_id):
+    idempotence_key = str(uuid.uuid4())
     payment = Payment.create({
         "amount": {
             "value": "200.00",
@@ -38,16 +39,18 @@ def create_invoice():
             "type": "redirect",
             "return_url": "https://t.me/vpn_buy_tunnel_bot"
         },
-        "description": "Заказ №1"
+        "description": "Заказ №"+str(message_id)+""
     }, idempotence_key)
     global payment_id
     payment_id = payment.id
     return payment.confirmation.confirmation_url
 
+
 @dp.message_handler(commands=['start'])
 async def process_terms_command(message: types.Message):
-    print(message)
     await message.reply(MESSAGES['terms'], reply=False)
+    global flag_add_to_db
+    flag_add_to_db = True
 
 
 @dp.message_handler(commands=['terms'])
@@ -60,15 +63,26 @@ async def process_buy_command(message: types.Message):
     if secret_key_cfg[:4] == 'test':
         await bot.send_message(message.chat.id, MESSAGES['pre_buy_demo_alert'])
 
-    await bot.send_message(message.chat.id, create_invoice())
+    await bot.send_message(message.chat.id, create_invoice(message.message_id))
     await bot.send_message(message.chat.id, '''После оплаты напишите '/check' ''')
+
+    global flag_add_to_db
+    flag_add_to_db = True
+
 
 @dp.message_handler(commands=['check'])
 async def process_terms_command(message: types.Message):
     try:
         payment = Payment.find_one(payment_id)
         if payment.paid == True:
-            await bot.send_message(message.chat.id, MESSAGES['successful_payment'].format(total_amount=200,currency="RUB"))
+            await bot.send_message(message.chat.id, MESSAGES['successful_payment'].format(total_amount=200,
+                                                                                          currency="RUB"))
+            global flag_add_to_db
+
+            if flag_add_to_db:
+                dict_to_db_func(message, payment_id)
+            flag_add_to_db = False
+
         else:
             await bot.send_message(message.chat.id, 'Оплата еще не поступила')
     except:
